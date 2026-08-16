@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "jurisprudencia-oficial-br": {
+      "command": "python3",
+      "args": ["/caminho/absoluto/jurisprudencia-oficial-br/plugins/jurisprudencia-oficial-br/mcp/server.py"]
+    }
+  }
+}

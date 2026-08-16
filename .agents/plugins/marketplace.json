@@ -1,0 +1,20 @@
+{
+  "name": "jurisprudencia-oficial-br",
+  "interface": {
+    "displayName": "Jurisprudência Oficial BR"
+  },
+  "plugins": [
+    {
+      "name": "jurisprudencia-oficial-br",
+      "source": {
+        "source": "local",
+        "path": "./plugins/jurisprudencia-oficial-br"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

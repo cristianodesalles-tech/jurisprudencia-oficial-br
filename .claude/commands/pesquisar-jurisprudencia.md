@@ -1,0 +1,1 @@
+Analise o caso fornecido em `$ARGUMENTS` usando as regras de `CLAUDE.md` e a skill em `plugins/jurisprudencia-oficial-br/skills/pesquisar-jurisprudencia-oficial/SKILL.md`. Pesquise fontes oficiais atuais, exija inteiro teor e entregue matriz auditável. Não use pistas não validadas na minuta.

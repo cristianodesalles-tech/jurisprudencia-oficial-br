@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "state": {
+    "AC":"TJAC","AL":"TJAL","AP":"TJAP","AM":"TJAM","BA":"TJBA","CE":"TJCE","DF":"TJDFT",
+    "ES":"TJES","GO":"TJGO","MA":"TJMA","MT":"TJMT","MS":"TJMS","MG":"TJMG","PA":"TJPA",
+    "PB":"TJPB","PR":"TJPR","PE":"TJPE","PI":"TJPI","RJ":"TJRJ","RN":"TJRN","RS":"TJRS",
+    "RO":"TJRO","RR":"TJRR","SC":"TJSC","SP":"TJSP","SE":"TJSE","TO":"TJTO"
+  },
+  "labor": {
+    "AC":["TRT14"],"AL":["TRT19"],"AP":["TRT8"],"AM":["TRT11"],"BA":["TRT5"],"CE":["TRT7"],
+    "DF":["TRT10"],"ES":["TRT17"],"GO":["TRT18"],"MA":["TRT16"],"MT":["TRT23"],"MS":["TRT24"],
+    "MG":["TRT3"],"PA":["TRT8"],"PB":["TRT13"],"PR":["TRT9"],"PE":["TRT6"],"PI":["TRT22"],
+    "RJ":["TRT1"],"RN":["TRT21"],"RS":["TRT4"],"RO":["TRT14"],"RR":["TRT11"],"SC":["TRT12"],
+    "SP":["TRT2","TRT15"],"SE":["TRT20"],"TO":["TRT10"]
+  },
+  "federal": {
+    "AC":"TRF1","AL":"TRF5","AP":"TRF1","AM":"TRF1","BA":"TRF1","CE":"TRF5","DF":"TRF1",
+    "ES":"TRF2","GO":"TRF1","MA":"TRF1","MT":"TRF1","MS":"TRF3","MG":"TRF6","PA":"TRF1",
+    "PB":"TRF5","PR":"TRF4","PE":"TRF5","PI":"TRF1","RJ":"TRF2","RN":"TRF5","RS":"TRF4",
+    "RO":"TRF1","RR":"TRF1","SC":"TRF4","SP":"TRF3","SE":"TRF5","TO":"TRF1"
+  }
+}

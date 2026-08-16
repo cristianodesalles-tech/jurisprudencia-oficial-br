@@ -1,0 +1,10 @@
+{
+  "interface": {
+    "display_name": "Pesquisar Jurisprudência Oficial",
+    "short_description": "Pesquisa e valida precedentes oficiais brasileiros",
+    "default_prompt": "Use $pesquisar-jurisprudencia-oficial para pesquisar e validar precedentes aplicáveis ao caso concreto."
+  },
+  "policy": {
+    "allow_implicit_invocation": true
+  }
+}

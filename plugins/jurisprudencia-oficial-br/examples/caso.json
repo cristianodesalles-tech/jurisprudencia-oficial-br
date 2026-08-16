@@ -1,0 +1,10 @@
+{
+  "summary": "Defesa empresarial em ação indenizatória por mero inadimplemento contratual",
+  "branch": "civil",
+  "defended_side": "réu",
+  "state": "GO",
+  "phase": "contestação",
+  "theses": ["mero inadimplemento contratual não gera dano moral automaticamente"],
+  "statutes": ["Código Civil art. 186", "Código Civil art. 927"],
+  "facts": ["ausência de lesão a direito da personalidade", "controvérsia contratual"]
+}

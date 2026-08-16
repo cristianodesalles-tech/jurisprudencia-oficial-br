@@ -1,0 +1,17 @@
+{
+  "court": "STJ",
+  "case_number": "REsp 0000000/GO",
+  "official_record_url": "https://scon.stj.jus.br/SCON/",
+  "full_text_url": "https://scon.stj.jus.br/SCON/",
+  "panel": "órgão julgador a conferir",
+  "rapporteur": "relator a conferir",
+  "judgment_date": "2026-01-01",
+  "publication_date": "2026-01-10",
+  "holding": "exemplo estrutural; não representa precedente real",
+  "applicable_excerpt": "exemplo estrutural; substituir somente por trecho conferido",
+  "excerpt_location": "página a conferir",
+  "thesis": "exemplo de validação",
+  "decisive_facts": ["fato a conferir"],
+  "distinctions": [],
+  "outcome": "resultado a conferir"
+}

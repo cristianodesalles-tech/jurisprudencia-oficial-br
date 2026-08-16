@@ -1,0 +1,118 @@
+name: jurisprudencia-oficial-br
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-jurisprudencia}
+      POSTGRES_USER: ${POSTGRES_USER:-juris}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-juris} -d ${POSTGRES_DB:-jurisprudencia}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?defina REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a '${REDIS_PASSWORD}' ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?defina MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?defina MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      STORAGE_BACKEND: postgres
+      DATABASE_URL: postgresql://${POSTGRES_USER:-juris}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jurisprudencia}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET: ${S3_BUCKET:-jurisprudencia-raw}
+      AUTO_MIGRATE: "1"
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-sentence-transformers}
+      HF_HOME: /models
+    ports:
+      - "127.0.0.1:${API_PORT:-8080}:8080"
+    volumes:
+      - model_cache:/models
+      - audit_data:/app/.state/audit
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+    networks: [backend]
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["python", "-m", "engine.worker"]
+    env_file: .env
+    environment:
+      STORAGE_BACKEND: postgres
+      DATABASE_URL: postgresql://${POSTGRES_USER:-juris}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jurisprudencia}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET: ${S3_BUCKET:-jurisprudencia-raw}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-sentence-transformers}
+      HF_HOME: /models
+    volumes:
+      - model_cache:/models
+      - audit_data:/app/.state/audit
+    depends_on:
+      api: {condition: service_healthy}
+    networks: [backend]
+
+  monitor:
+    build: .
+    restart: unless-stopped
+    command: ["python", "-m", "engine.scheduler"]
+    env_file: .env
+    environment:
+      STATE_DIR: /app/.state
+      SOURCE_PROBE_INTERVAL: ${SOURCE_PROBE_INTERVAL:-3600}
+    volumes:
+      - audit_data:/app/.state/audit
+    networks: [backend]
+
+networks:
+  backend:
+    internal: false
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  model_cache:
+  audit_data:

@@ -1,0 +1,48 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Descoberta Jurisprudencial Oficial BR",
+    "version": "0.2.0",
+    "description": "Actions apenas para descoberta em DataJud e STJ Dados Abertos. Não validam jurisprudência nem inteiro teor."
+  },
+  "servers": [{"url": "https://api-publica.datajud.cnj.jus.br"}],
+  "paths": {
+    "/api_publica_{courtIndex}/_search": {
+      "post": {
+        "operationId": "searchDatajudMetadata",
+        "summary": "Pesquisar metadados processuais no DataJud",
+        "description": "Use somente para descoberta. Confirme qualquer julgado no portal e inteiro teor oficiais.",
+        "parameters": [{
+          "name": "courtIndex",
+          "in": "path",
+          "required": true,
+          "description": "Índice sem api_publica_, por exemplo tjgo, trt18, stj ou tst.",
+          "schema": {"type": "string", "pattern": "^[a-z0-9]+$"}
+        }],
+        "security": [{"datajudApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"type": "object", "additionalProperties": true}}}
+        },
+        "responses": {"200": {"description": "Metadados encontrados"}}
+      }
+    },
+    "/api/3/action/package_search": {
+      "get": {
+        "operationId": "searchStjOpenDatasets",
+        "summary": "Descobrir conjuntos no STJ Dados Abertos",
+        "servers": [{"url": "https://dadosabertos.web.stj.jus.br"}],
+        "parameters": [
+          {"name": "q", "in": "query", "required": true, "schema": {"type": "string"}},
+          {"name": "rows", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}}
+        ],
+        "responses": {"200": {"description": "Conjuntos oficiais encontrados"}}
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "datajudApiKey": {"type": "apiKey", "in": "header", "name": "Authorization", "description": "Valor no formato APIKey CHAVE, obtido conforme documentação do CNJ."}
+    }
+  }
+}

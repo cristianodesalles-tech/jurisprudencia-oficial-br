@@ -1,0 +1,43 @@
+import json
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+REPO = ROOT.parents[1]
+
+
+class InfrastructureContracts(unittest.TestCase):
+    def test_migration_has_required_integrity_and_search_indexes(self):
+        sql = (ROOT / "infra" / "migrations" / "001_init.sql").read_text(encoding="utf-8").lower()
+        for fragment in ("create extension if not exists vector", "unique", "search_vector", "using gin", "using hnsw", "content_sha256", "audit_events"):
+            self.assertIn(fragment, sql)
+
+    def test_compose_does_not_expose_databases(self):
+        compose = (REPO / "docker-compose.yml").read_text(encoding="utf-8")
+        self.assertIn('"127.0.0.1:${API_PORT:-8080}:8080"', compose)
+        postgres_section = compose.split("  postgres:", 1)[1].split("  redis:", 1)[0]
+        redis_section = compose.split("  redis:", 1)[1].split("  minio:", 1)[0]
+        self.assertNotIn("ports:", postgres_section)
+        self.assertNotIn("ports:", redis_section)
+
+    def test_manifests_are_valid_json(self):
+        for path in (ROOT / ".codex-plugin" / "plugin.json", ROOT / ".mcp.json", REPO / ".agents" / "plugins" / "marketplace.json"):
+            self.assertIsInstance(json.loads(path.read_text(encoding="utf-8")), dict)
+
+    def test_api_fails_closed_and_protects_operational_routes(self):
+        source = (ROOT / "engine" / "api.py").read_text(encoding="utf-8")
+        self.assertIn('docs_url=None, redoc_url=None', source)
+        self.assertIn('if not configured:', source)
+        self.assertIn('HTTP_503_SERVICE_UNAVAILABLE', source)
+        for route in ('/health/ready', '/metrics', '/v1/search', '/v1/ingestions'):
+            declaration = source.split(f'"{route}"', 1)[1].split("\n\n", 1)[0]
+            self.assertIn('Depends(require_api_key)', declaration)
+
+    def test_container_runs_unprivileged_with_one_api_worker(self):
+        dockerfile = (REPO / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("USER appuser", dockerfile)
+        self.assertIn('"--workers", "1"', dockerfile)
+        self.assertNotIn("USER root", dockerfile)
+
+
+if __name__ == "__main__": unittest.main()
