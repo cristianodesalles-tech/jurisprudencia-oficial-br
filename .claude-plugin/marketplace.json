@@ -3,6 +3,7 @@
   "owner": {
     "name": "Cristiano Salles e Advogados Associados"
   },
+  "description": "Marketplace de pesquisa jurisprudencial brasileira em fontes oficiais, com validação de inteiro teor e auditoria anti-alucinação.",
   "plugins": [
     {
       "name": "jurisprudencia-oficial-br",
