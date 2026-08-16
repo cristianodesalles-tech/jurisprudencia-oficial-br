@@ -16,6 +16,9 @@ jobs:
       - run: python3 -m compileall -q plugins/jurisprudencia-oficial-br/engine plugins/jurisprudencia-oficial-br/mcp plugins/jurisprudencia-oficial-br/scripts
       - run: python3 scripts/doctor.py
       - run: python3 -m json.tool plugins/jurisprudencia-oficial-br/.codex-plugin/plugin.json >/dev/null
+      - run: python3 -m json.tool .claude-plugin/marketplace.json >/dev/null
+      - run: python3 -m json.tool plugins/jurisprudencia-oficial-br/.claude-plugin/plugin.json >/dev/null
+      - run: python3 -m json.tool plugins/jurisprudencia-oficial-br/.mcp.json >/dev/null
       - run: python3 -m json.tool plugins/jurisprudencia-oficial-br/config/sources.json >/dev/null
       - run: python3 -m json.tool plugins/jurisprudencia-oficial-br/config/courts.json >/dev/null
       - run: cp .env.example .env && docker compose config --quiet

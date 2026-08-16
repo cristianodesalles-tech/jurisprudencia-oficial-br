@@ -21,8 +21,34 @@ class InfrastructureContracts(unittest.TestCase):
         self.assertNotIn("ports:", redis_section)
 
     def test_manifests_are_valid_json(self):
-        for path in (ROOT / ".codex-plugin" / "plugin.json", ROOT / ".mcp.json", REPO / ".agents" / "plugins" / "marketplace.json"):
+        for path in (
+            ROOT / ".codex-plugin" / "plugin.json",
+            ROOT / ".claude-plugin" / "plugin.json",
+            ROOT / ".mcp.json",
+            REPO / ".agents" / "plugins" / "marketplace.json",
+            REPO / ".claude-plugin" / "marketplace.json",
+        ):
             self.assertIsInstance(json.loads(path.read_text(encoding="utf-8")), dict)
+
+    def test_claude_marketplace_is_self_contained_and_cache_safe(self):
+        marketplace = json.loads((REPO / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        entry = marketplace["plugins"][0]
+        self.assertEqual(entry["name"], "jurisprudencia-oficial-br")
+        self.assertEqual((REPO / entry["source"]).resolve(), ROOT.resolve())
+        self.assertTrue((ROOT / ".claude-plugin" / "plugin.json").is_file())
+        self.assertTrue((ROOT / "skills" / "pesquisar-jurisprudencia-oficial" / "SKILL.md").is_file())
+        mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["jurisprudencia-oficial-br"]
+        self.assertIn("${CLAUDE_PLUGIN_ROOT}", " ".join(mcp["args"]))
+        self.assertIn("${CLAUDE_PLUGIN_DATA}", mcp["env"]["STATE_DIR"])
+        codex_manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(codex_manifest["mcpServers"]["jurisprudencia-oficial-br"]["args"], ["mcp/server.py"])
+
+    def test_public_install_commands_match_current_clients(self):
+        readme = (REPO / "README.md").read_text(encoding="utf-8")
+        self.assertIn("codex plugin add jurisprudencia-oficial-br@jurisprudencia-oficial-br", readme)
+        self.assertNotIn("codex plugin install", readme)
+        self.assertIn("claude plugin marketplace add cristianodesalles-tech/jurisprudencia-oficial-br", readme)
+        self.assertIn("claude plugin install jurisprudencia-oficial-br@jurisprudencia-oficial-br", readme)
 
     def test_api_fails_closed_and_protects_operational_routes(self):
         source = (ROOT / "engine" / "api.py").read_text(encoding="utf-8")

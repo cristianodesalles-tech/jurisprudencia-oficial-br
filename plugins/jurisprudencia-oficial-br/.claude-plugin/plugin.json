@@ -1,0 +1,20 @@
+{
+  "name": "jurisprudencia-oficial-br",
+  "displayName": "Jurisprudência Oficial BR",
+  "version": "0.2.1",
+  "description": "Pesquisa e valida jurisprudência brasileira em fontes oficiais, com inteiro teor e auditoria anti-alucinação.",
+  "author": {
+    "name": "Cristiano Salles e Advogados Associados",
+    "url": "https://github.com/cristianodesalles-tech"
+  },
+  "homepage": "https://github.com/cristianodesalles-tech/jurisprudencia-oficial-br",
+  "repository": "https://github.com/cristianodesalles-tech/jurisprudencia-oficial-br",
+  "license": "MIT",
+  "keywords": [
+    "jurisprudencia",
+    "direito-brasileiro",
+    "precedentes",
+    "fontes-oficiais",
+    "auditoria"
+  ]
+}

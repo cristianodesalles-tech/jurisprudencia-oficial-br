@@ -1,6 +1,6 @@
 [project]
 name = "jurisprudencia-oficial-br"
-version = "0.2.0"
+version = "0.2.1"
 description = "Pesquisa jurisprudencial brasileira auditável e orientada a fontes oficiais"
 requires-python = ">=3.11"
 license = {text = "MIT"}

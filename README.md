@@ -54,6 +54,28 @@ Reinicie o Codex ou abra uma nova tarefa e peça: “pesquise jurisprudência of
 
 Código-fonte, atualizações e contribuições: [github.com/cristianodesalles-tech/jurisprudencia-oficial-br](https://github.com/cristianodesalles-tech/jurisprudencia-oficial-br).
 
+## Instalação no Claude Code
+
+O repositório também é um marketplace nativo do Claude Code. Não é necessário clonar para instalar:
+
+```bash
+claude plugin marketplace add cristianodesalles-tech/jurisprudencia-oficial-br
+claude plugin install jurisprudencia-oficial-br@jurisprudencia-oficial-br --scope user
+```
+
+Abra uma nova sessão ou execute `/reload-plugins`. A skill fica disponível como
+`/jurisprudencia-oficial-br:pesquisar-jurisprudencia-oficial` e o atalho como
+`/jurisprudencia-oficial-br:pesquisar-jurisprudencia`. O servidor MCP solicita aprovação no primeiro uso.
+
+Para atualizar uma instalação existente:
+
+```bash
+claude plugin marketplace update jurisprudencia-oficial-br
+claude plugin update jurisprudencia-oficial-br@jurisprudencia-oficial-br
+```
+
+A estrutura segue a documentação oficial de [marketplaces](https://code.claude.com/docs/en/plugin-marketplaces) e [plugins](https://code.claude.com/docs/en/plugins).
+
 ## Núcleo local
 
 O núcleo requer Python 3.11+ e não possui dependências externas. Usa SQLite, armazenamento em arquivos e embedding determinístico de contingência.
@@ -90,7 +112,7 @@ Para DataJud, defina `DATAJUD_API_KEY` no ambiente. A chave nunca deve entrar no
 ## Clientes
 
 - Codex: manifesto em `.codex-plugin/` e marketplace na raiz.
-- Claude: manifesto em `.claude-plugin/`, comando e servidor MCP local.
+- Claude Code: marketplace GitHub em `.claude-plugin/marketplace.json`, manifesto próprio, skill, comando e servidor MCP isolado.
 - Cowork/agentes: instruções em `AGENTS.md` e `clients/cowork.md`.
 - Custom GPT: instruções e Action OpenAPI em `clients/`; o GPT precisa de navegação para validar o inteiro teor.
 

@@ -1,0 +1,13 @@
+{
+  "name": "jurisprudencia-oficial-br",
+  "owner": {
+    "name": "Cristiano Salles e Advogados Associados"
+  },
+  "plugins": [
+    {
+      "name": "jurisprudencia-oficial-br",
+      "source": "./plugins/jurisprudencia-oficial-br",
+      "description": "Pesquisa jurisprudência brasileira em fontes oficiais, valida inteiro teor e mantém auditoria anti-alucinação."
+    }
+  ]
+}

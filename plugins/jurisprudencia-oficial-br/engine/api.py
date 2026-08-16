@@ -67,7 +67,7 @@ def require_api_key(x_api_key: str = Header(default="")) -> None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "chave inválida")
 
 
-app = FastAPI(title="Jurisprudência Oficial BR", version="0.2.0", docs_url=None, redoc_url=None)
+app = FastAPI(title="Jurisprudência Oficial BR", version="0.2.1", docs_url=None, redoc_url=None)
 
 
 @app.get("/health/live")

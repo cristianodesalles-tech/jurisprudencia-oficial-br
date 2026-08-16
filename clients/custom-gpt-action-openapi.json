@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Descoberta Jurisprudencial Oficial BR",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Actions apenas para descoberta em DataJud e STJ Dados Abertos. Não validam jurisprudência nem inteiro teor."
   },
   "servers": [{"url": "https://api-publica.datajud.cnj.jus.br"}],

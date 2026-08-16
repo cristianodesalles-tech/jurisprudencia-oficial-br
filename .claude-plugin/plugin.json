@@ -1,9 +1,0 @@
-{
-  "name": "jurisprudencia-oficial-br",
-  "version": "0.2.0",
-  "description": "Pesquisa e valida jurisprudência brasileira em fontes oficiais.",
-  "author": {"name": "Cristiano Salles e Advogados Associados"},
-  "license": "MIT",
-  "skills": "./plugins/jurisprudencia-oficial-br/skills/",
-  "mcpServers": "./.mcp.json"
-}

@@ -63,7 +63,7 @@ def main():
             message = json.loads(line)
             method = message.get("method")
             if method == "initialize":
-                payload = {"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"jurisprudencia-oficial-br","version":"0.2.0"}}
+                payload = {"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"jurisprudencia-oficial-br","version":"0.2.1"}}
             elif method == "tools/list": payload = {"tools": TOOLS}
             elif method == "tools/call": payload = result(dispatch(message["params"]["name"], message["params"].get("arguments", {})))
             elif method == "notifications/initialized": continue
