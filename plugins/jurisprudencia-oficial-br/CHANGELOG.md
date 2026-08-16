@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Isola o fluxo de pesquisa de JurisRatio e outros provedores privados com cota.
+- Trata respostas de limite externo como erro de roteamento e continua pelos fallbacks oficiais.
+- Adiciona teste de contrato para impedir fontes privadas na configuração do plugin.
+
 ## 0.2.1
 
 - Adiciona marketplace e manifesto nativos para Claude Code.

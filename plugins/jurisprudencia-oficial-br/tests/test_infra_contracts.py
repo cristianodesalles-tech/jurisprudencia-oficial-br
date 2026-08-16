@@ -50,6 +50,21 @@ class InfrastructureContracts(unittest.TestCase):
         self.assertIn("claude plugin marketplace add cristianodesalles-tech/jurisprudencia-oficial-br", readme)
         self.assertIn("claude plugin install jurisprudencia-oficial-br@jurisprudencia-oficial-br", readme)
 
+    def test_research_is_isolated_from_quota_providers(self):
+        skill = (ROOT / "skills" / "pesquisar-jurisprudencia-oficial" / "SKILL.md").read_text(encoding="utf-8")
+        command = (ROOT / "commands" / "pesquisar-jurisprudencia.md").read_text(encoding="utf-8")
+        self.assertIn("Isolamento obrigatório de provedores", skill)
+        self.assertIn("ERRO_DE_ROTEAMENTO_EXTERNO", skill)
+        self.assertIn("Não invoque JurisRatio", command)
+
+        configured = json.loads((ROOT / "config" / "sources.json").read_text(encoding="utf-8"))["sources"]
+        self.assertTrue(configured)
+        self.assertTrue(all(source["authority"] in {"official", "primary"} for source in configured))
+        forbidden = ("jurisratio", "jusbrasil")
+        for source in configured:
+            identity = f'{source["id"]} {source["base_url"]}'.lower()
+            self.assertFalse(any(provider in identity for provider in forbidden))
+
     def test_api_fails_closed_and_protects_operational_routes(self):
         source = (ROOT / "engine" / "api.py").read_text(encoding="utf-8")
         self.assertIn('docs_url=None, redoc_url=None', source)

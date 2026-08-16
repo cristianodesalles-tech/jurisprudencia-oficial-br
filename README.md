@@ -31,6 +31,8 @@ O projeto decompõe o caso em teses, planeja buscas na hierarquia adequada, cons
 - Hash SHA-256 do documento e auditoria JSONL.
 - Falha fechada: erro de rede, documento ausente ou domínio não oficial impede validação.
 - Autoajuste restrito à estratégia de busca e recuperação; nunca altera evidência ou inventa campos.
+- Isolamento de JurisRatio e de outros provedores privados com cota: o fluxo padrão usa somente acervo próprio, MCP, navegador e fontes oficiais.
+- Erro de cota de ferramenta externa é tratado como falha de roteamento e não interrompe a pesquisa oficial.
 
 ## Instalação no Codex
 

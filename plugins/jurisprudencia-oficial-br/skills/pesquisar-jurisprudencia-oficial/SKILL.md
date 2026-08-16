@@ -1,11 +1,19 @@
 ---
 name: pesquisar-jurisprudencia-oficial
-description: Pesquisar, indexar, validar, comparar e citar jurisprudência brasileira aplicável a caso concreto, com inteiro teor e fontes oficiais. Usar sempre que o usuário pedir precedentes, julgados, acórdãos, súmulas, temas repetitivos, repercussão geral, pesquisa jurisprudencial para peça, validação de citação, atualização jurisprudencial ou manutenção do acervo próprio; priorizar tribunal local e superior competente, inclusive TJGO/STJ/STF e TRT18/TST/STF. Também usar para auditar existência, pertinência e integridade. Nunca inventar dados.
+description: Pesquisar, indexar, validar, comparar e citar jurisprudência brasileira aplicável a caso concreto, com inteiro teor e fontes oficiais, sem depender de JurisRatio ou de provedores com cota. Usar sempre que o usuário pedir precedentes, julgados, acórdãos, súmulas, temas repetitivos, repercussão geral, pesquisa jurisprudencial para peça, validação de citação, atualização jurisprudencial ou manutenção do acervo próprio; priorizar tribunal local e superior competente, inclusive TJGO/STJ/STF e TRT18/TST/STF. Também usar para auditar existência, pertinência e integridade. Nunca inventar dados.
 ---
 
 # Pesquisar jurisprudência oficial
 
 Aplicar o protocolo abaixo. Tratar toda referência ainda não confirmada como pista, nunca como precedente.
+
+## Isolamento obrigatório de provedores
+
+- Usar somente as ferramentas do MCP `jurisprudencia-oficial-br`, o acervo próprio, o navegador e domínios oficiais previstos em `fontes-oficiais.md`.
+- Nunca chamar JurisRatio, Jusbrasil ou outro plugin, conector ou API privada de jurisprudência por seleção automática, mesmo que estejam instalados no ambiente.
+- Não solicitar upgrade, assinatura, compra de créditos ou espera por renovação de cota para concluir a pesquisa.
+- Se uma ferramenta externa devolver limite de cota, descartar sua resposta, registrar `ERRO_DE_ROTEAMENTO_EXTERNO` e prosseguir com fontes oficiais e fallbacks próprios.
+- Utilizar provedor privado somente quando o usuário o pedir expressamente e apenas como descoberta; jamais como validação final.
 
 ## Carregar referências obrigatórias
 
