@@ -34,13 +34,20 @@ O projeto decompõe o caso em teses, planeja buscas na hierarquia adequada, cons
 
 ## Instalação no Codex
 
-Clone o repositório público e instale o plugin pelo marketplace incluído:
+Instale primeiro o [Codex CLI](https://learn.chatgpt.com/docs/codex/cli):
+
+```bash
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+exec zsh -l
+```
+
+Depois, clone o repositório público e instale o plugin pelo marketplace incluído:
 
 ```bash
 git clone https://github.com/cristianodesalles-tech/jurisprudencia-oficial-br.git
 cd jurisprudencia-oficial-br
 codex plugin marketplace add "$PWD"
-codex plugin install jurisprudencia-oficial-br@jurisprudencia-oficial-br
+codex plugin add jurisprudencia-oficial-br@jurisprudencia-oficial-br
 ```
 
 Reinicie o Codex ou abra uma nova tarefa e peça: “pesquise jurisprudência oficial aplicável a este caso”.
