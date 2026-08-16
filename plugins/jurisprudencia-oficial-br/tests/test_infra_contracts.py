@@ -55,6 +55,8 @@ class InfrastructureContracts(unittest.TestCase):
         command = (ROOT / "commands" / "pesquisar-jurisprudencia.md").read_text(encoding="utf-8")
         self.assertIn("Isolamento obrigatório de provedores", skill)
         self.assertIn("ERRO_DE_ROTEAMENTO_EXTERNO", skill)
+        self.assertIn('matcher: "mcp__claude_ai_jusratio__.*"', skill)
+        self.assertIn("exit 2", skill)
         self.assertIn("Não invoque JurisRatio", command)
 
         configured = json.loads((ROOT / "config" / "sources.json").read_text(encoding="utf-8"))["sources"]

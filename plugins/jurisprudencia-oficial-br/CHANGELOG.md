@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+- Adiciona bloqueio técnico `PreToolUse` para impedir chamadas ao conector global JusRatio enquanto a skill oficial estiver ativa.
+- Mantém a JusRatio independente e utilizável fora do fluxo da Jurisprudência Oficial BR.
+
 ## 0.2.2
 
 - Isola o fluxo de pesquisa de JurisRatio e outros provedores privados com cota.

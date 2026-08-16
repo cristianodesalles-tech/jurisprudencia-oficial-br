@@ -33,6 +33,7 @@ O projeto decompõe o caso em teses, planeja buscas na hierarquia adequada, cons
 - Autoajuste restrito à estratégia de busca e recuperação; nunca altera evidência ou inventa campos.
 - Isolamento de JurisRatio e de outros provedores privados com cota: o fluxo padrão usa somente acervo próprio, MCP, navegador e fontes oficiais.
 - Erro de cota de ferramenta externa é tratado como falha de roteamento e não interrompe a pesquisa oficial.
+- No Claude Code, um hook de pré-execução bloqueia tecnicamente as ferramentas JusRatio enquanto a skill oficial estiver ativa, sem desabilitar o conector para outros usos.
 
 ## Instalação no Codex
 
