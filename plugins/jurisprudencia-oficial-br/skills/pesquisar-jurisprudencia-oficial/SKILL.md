@@ -19,7 +19,7 @@ Aplicar o protocolo abaixo. Tratar toda referência ainda não confirmada como p
 - Nunca chamar JurisRatio, Jusbrasil ou outro plugin, conector ou API privada de jurisprudência por seleção automática, mesmo que estejam instalados no ambiente.
 - Não solicitar upgrade, assinatura, compra de créditos ou espera por renovação de cota para concluir a pesquisa.
 - Se uma ferramenta externa devolver limite de cota, descartar sua resposta, registrar `ERRO_DE_ROTEAMENTO_EXTERNO` e prosseguir com fontes oficiais e fallbacks próprios.
-- Utilizar provedor privado somente quando o usuário o pedir expressamente e apenas como descoberta; jamais como validação final.
+- Não usar provedor privado nem mesmo como descoberta por iniciativa própria. Utilizá-lo somente quando o usuário o pedir expressamente e jamais como validação final.
 - O hook `PreToolUse` desta skill deve bloquear tecnicamente todas as ferramentas `mcp__claude_ai_jusratio__.*` antes da chamada, sem interferir no uso da JusRatio fora desta skill.
 
 ## Carregar referências obrigatórias
@@ -43,8 +43,10 @@ Aplicar o protocolo abaixo. Tratar toda referência ainda não confirmada como p
 5. Pesquisar fontes oficiais. Usar DataJud apenas para metadados/descoberta, nunca como prova do conteúdo do julgado.
    - Consultar primeiro o acervo próprio com `search_local_corpus`.
    - Ampliar nas fontes oficiais quando a cobertura estiver incompleta ou desatualizada.
+   - Se fetch automatizado, robots.txt ou JavaScript impedirem a leitura, abrir o portal no Chrome e operar a interface oficial interativamente. Portal dinâmico não autoriza encerrar a pesquisa.
+   - Antes de declarar fonte bloqueada, registrar ao menos três variações de consulta, tentativa por número/classe/dispositivo e tentativa no navegador oficial, salvo CAPTCHA ou controle de acesso objetivo.
 6. Buscar ao menos dois precedentes materialmente aderentes quando existirem: um local/regional e um superior. Não completar quota com julgado inadequado.
-7. Abrir o inteiro teor oficial de cada candidato. Conferir identidade, tese, fatos determinantes, resultado, vigência, superação e trechos citáveis no contexto.
+7. Abrir e baixar o inteiro teor oficial de cada candidato. Conferir identidade, tese, fatos determinantes, resultado, vigência, superação e trechos citáveis no contexto. Calcular SHA-256 do arquivo e executar `validate_candidate`; sem arquivo e hash, o estado máximo é `CONFIRMADO`, nunca `VALIDADO`.
 8. Fazer busca adversarial: procurar distinção, entendimento contrário, afetação, suspensão, modulação, cancelamento, superação e legislação posterior.
 9. Revalidar cada metadado no portal oficial. Registrar URL, data/hora, método, hash do arquivo quando baixado e status de validação.
 10. Somente então redigir a aplicação ao caso. Distinguir citação literal curta de paráfrase e indicar página/parágrafo quando disponível.
@@ -55,7 +57,7 @@ Quando uma estratégia falhar, variar sinônimos, operadores, dispositivo, class
 
 Nunca transformar erro de rede, ausência de resultado ou ambiguidade em confirmação. Se o inteiro teor permanecer inacessível, rotular `NÃO VALIDADO` e excluir o precedente do texto proposto para a peça.
 
-Encerrar somente quando: (a) a matriz mínima validada estiver completa; (b) buscas razoáveis e diversificadas indicarem inexistência/indisponibilidade; ou (c) houver bloqueio externo objetivo. “Não encontrei ainda” exige ampliar a busca; “não existe” exige relatório negativo de consultas.
+Encerrar somente quando: (a) a matriz mínima validada estiver completa; (b) buscas razoáveis e diversificadas, inclusive pelo Chrome interativo, indicarem inexistência/indisponibilidade; ou (c) houver bloqueio externo objetivo, como CAPTCHA ou controle de acesso que não possa ser legitimamente superado. Robots.txt de fetch ou interface JavaScript, isoladamente, não são bloqueio objetivo quando o navegador está disponível. “Não encontrei ainda” exige ampliar a busca; “não existe” exige relatório negativo de consultas.
 
 ## Usar o mecanismo determinístico
 

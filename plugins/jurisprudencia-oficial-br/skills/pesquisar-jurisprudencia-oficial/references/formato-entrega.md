@@ -10,7 +10,7 @@ Indicar a orientação encontrada, seu grau de segurança e eventuais conflitos.
 
 ## 3. Matriz de precedentes
 
-Para cada julgado: status; força; tribunal; processo; órgão; relator; julgamento/publicação; tese; fatos determinantes; trecho curto; localização; resultado; aplicação; distinções; URL do registro; URL do inteiro teor; data da verificação; hash quando houver.
+Para cada julgado: status; força; tribunal; processo; órgão; relator; julgamento/publicação; tese; fatos determinantes; trecho curto; localização; resultado; aplicação; distinções; URL do registro; URL do inteiro teor; data da verificação; arquivo e SHA-256 obrigatórios para `VALIDADO`.
 
 Separar `VALIDADOS` de `PISTAS/NÃO VALIDADOS`. Somente os primeiros podem alimentar a minuta.
 

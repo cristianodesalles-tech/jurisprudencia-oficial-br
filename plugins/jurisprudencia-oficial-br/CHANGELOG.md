@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.4
+
+- Torna obrigatório o fallback pelo Chrome em portais oficiais dinâmicos ou bloqueados para fetch.
+- Proíbe agregadores privados como descoberta automática.
+- Exige arquivo oficial e SHA-256 para classificar qualquer precedente como `VALIDADO`.
+- Impede que falta de número de processo fornecido pelo usuário encerre pesquisa temática.
+
 ## 0.2.3
 
 - Adiciona bloqueio técnico `PreToolUse` para impedir chamadas ao conector global JusRatio enquanto a skill oficial estiver ativa.

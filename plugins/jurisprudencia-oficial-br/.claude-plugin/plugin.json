@@ -1,7 +1,7 @@
 {
   "name": "jurisprudencia-oficial-br",
   "displayName": "Jurisprudência Oficial BR",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Pesquisa e valida jurisprudência brasileira em fontes oficiais, com inteiro teor, auditoria anti-alucinação e independência de provedores com cota.",
   "author": {
     "name": "Cristiano Salles e Advogados Associados",

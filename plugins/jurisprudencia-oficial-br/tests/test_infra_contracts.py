@@ -57,7 +57,15 @@ class InfrastructureContracts(unittest.TestCase):
         self.assertIn("ERRO_DE_ROTEAMENTO_EXTERNO", skill)
         self.assertIn('matcher: "mcp__claude_ai_jusratio__.*"', skill)
         self.assertIn("exit 2", skill)
+        self.assertIn("Portal dinâmico não autoriza encerrar a pesquisa", skill)
+        self.assertIn("sem arquivo e hash", skill)
         self.assertIn("Não invoque JurisRatio", command)
+
+        strategy = (ROOT / "skills" / "pesquisar-jurisprudencia-oficial" / "references" / "estrategia-busca.md").read_text(encoding="utf-8")
+        validation = (ROOT / "skills" / "pesquisar-jurisprudencia-oficial" / "references" / "politica-validacao.md").read_text(encoding="utf-8")
+        self.assertIn("Chrome interativo", strategy)
+        self.assertIn("três consultas semanticamente distintas", strategy)
+        self.assertIn("SHA-256 obrigatoriamente", validation)
 
         configured = json.loads((ROOT / "config" / "sources.json").read_text(encoding="utf-8"))["sources"]
         self.assertTrue(configured)

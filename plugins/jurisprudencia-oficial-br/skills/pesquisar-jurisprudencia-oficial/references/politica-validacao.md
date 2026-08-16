@@ -21,7 +21,7 @@ Tribunal, classe e número, órgão julgador, relator, data de julgamento, data 
 
 1. **Existência:** o processo/documento abre em domínio oficial.
 2. **Identidade:** número, tribunal e órgão coincidem entre registro e documento.
-3. **Integridade:** documento completo e legível; guardar SHA-256 quando baixado.
+3. **Integridade:** documento completo e legível; baixar ou salvar o arquivo oficial e guardar SHA-256 obrigatoriamente para `VALIDADO`. Sem bytes verificáveis e hash, classificar no máximo como `CONFIRMADO`.
 4. **Semântica:** o trecho existe literalmente ou está marcado como paráfrase fiel.
 5. **Aderência:** fatos determinantes e questão jurídica são comparados ao caso.
 6. **Autoridade:** competência, órgão, colegialidade e força do precedente são informadas.

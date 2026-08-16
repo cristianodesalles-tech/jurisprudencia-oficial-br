@@ -34,6 +34,8 @@ O projeto decompõe o caso em teses, planeja buscas na hierarquia adequada, cons
 - Isolamento de JurisRatio e de outros provedores privados com cota: o fluxo padrão usa somente acervo próprio, MCP, navegador e fontes oficiais.
 - Erro de cota de ferramenta externa é tratado como falha de roteamento e não interrompe a pesquisa oficial.
 - No Claude Code, um hook de pré-execução bloqueia tecnicamente as ferramentas JusRatio enquanto a skill oficial estiver ativa, sem desabilitar o conector para outros usos.
+- Portais oficiais dinâmicos exigem fallback pelo Chrome; robots.txt ou JavaScript não encerram a busca enquanto a interface oficial estiver acessível.
+- O selo `VALIDADO` exige arquivo oficial preservado e SHA-256; sem isso, o resultado permanece no máximo `CONFIRMADO`.
 
 ## Instalação no Codex
 
