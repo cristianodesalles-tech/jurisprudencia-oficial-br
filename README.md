@@ -34,14 +34,18 @@ O projeto decompõe o caso em teses, planeja buscas na hierarquia adequada, cons
 
 ## Instalação no Codex
 
-Após clonar o repositório:
+Clone o repositório público e instale o plugin pelo marketplace incluído:
 
 ```bash
+git clone https://github.com/cristianodesalles-tech/jurisprudencia-oficial-br.git
+cd jurisprudencia-oficial-br
 codex plugin marketplace add "$PWD"
 codex plugin install jurisprudencia-oficial-br@jurisprudencia-oficial-br
 ```
 
 Reinicie o Codex ou abra uma nova tarefa e peça: “pesquise jurisprudência oficial aplicável a este caso”.
+
+Código-fonte, atualizações e contribuições: [github.com/cristianodesalles-tech/jurisprudencia-oficial-br](https://github.com/cristianodesalles-tech/jurisprudencia-oficial-br).
 
 ## Núcleo local
 
