@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 import ipaddress
+import html
+import http.cookiejar
 import json
 import re
 import socket
 import ssl
+import threading
+import time
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
+from datetime import datetime
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.parse import urlencode, urlparse
+from urllib.request import HTTPRedirectHandler, HTTPCookieProcessor, Request, build_opener
 
 from .domain import Provenance, SourceRole, stable_hash, utcnow
 
@@ -157,3 +162,98 @@ class SourceRegistry:
 
     def validation_sources(self) -> list[dict[str, Any]]:
         return [dict(source) for source in self.sources.values() if source.get("validation_capability")]
+
+    def assisted_sources(self) -> list[dict[str, Any]]:
+        return [dict(source) for source in self.sources.values() if source.get("access_mode") == "assisted"]
+
+
+class TRF1SearchConnector:
+    """Pesquisa acórdãos no formulário JSF público mantido pelo CJF, com baixa cadência."""
+
+    base_url = "https://jurisprudencia.cjf.jus.br"
+    search_url = base_url + "/trf1/index.xhtml"
+
+    def __init__(self, timeout: int = 45, min_interval: float = 2.0, max_bytes: int = 15_000_000):
+        self.timeout, self.min_interval, self.max_bytes = timeout, min_interval, max_bytes
+        self._lock, self._last_request = threading.Lock(), 0.0
+
+    def _fetch(self, query: str) -> str:
+        if len(query.strip()) < 3:
+            raise ConnectorError("consulta TRF1 deve ter ao menos três caracteres")
+        with self._lock:
+            wait = self.min_interval - (time.monotonic() - self._last_request)
+            if wait > 0:
+                time.sleep(wait)
+            jar = http.cookiejar.CookieJar()
+            opener = build_opener(_OfficialRedirectHandler(), HTTPCookieProcessor(jar))
+            headers = {"User-Agent": "jurisprudencia-oficial-br/0.3 (+research; respectful)"}
+            try:
+                initial = opener.open(Request(self.base_url + "/trf1", headers=headers), timeout=self.timeout).read(2_000_001)
+                if len(initial) > 2_000_000:
+                    raise ConnectorError("página inicial TRF1 excede o limite")
+                page = initial.decode("utf-8", errors="replace")
+                states = re.findall(r'name="javax\.faces\.ViewState"[^>]*value="([^"]+)', page)
+                if not states:
+                    raise ConnectorError("ViewState do TRF1 não encontrado")
+                body = urlencode([
+                    ("formulario", "formulario"), ("formulario:textoLivre", query.strip()),
+                    ("formulario:selectTiposDocumento", "ACORDAO"), ("formulario:j_idt62", "TRF1"),
+                    ("formulario:actPesquisar", ""), ("javax.faces.ViewState", html.unescape(states[-1])),
+                ]).encode()
+                request = Request(self.search_url, data=body, headers={**headers,
+                    "Content-Type": "application/x-www-form-urlencoded", "Origin": self.base_url,
+                    "Referer": self.base_url + "/trf1"})
+                raw = opener.open(request, timeout=self.timeout).read(self.max_bytes + 1)
+                if len(raw) > self.max_bytes:
+                    raise ConnectorError("resultado TRF1 excede o limite")
+                return raw.decode("utf-8", errors="replace")
+            except HTTPError as exc:
+                if exc.code in (401, 403, 429):
+                    raise AccessControlled(f"TRF1 controlado ou limitado: HTTP {exc.code}") from exc
+                raise ConnectorError(f"TRF1 respondeu HTTP {exc.code}") from exc
+            except URLError as exc:
+                raise ConnectorError(f"falha de rede TRF1: {exc.reason}") from exc
+            finally:
+                self._last_request = time.monotonic()
+
+    @staticmethod
+    def _text(value: str) -> str:
+        value = re.sub(r"(?i)<br\s*/?>", " ", value)
+        value = re.sub(r"<[^>]+>", " ", value)
+        return re.sub(r"\s+", " ", html.unescape(value)).strip()
+
+    @classmethod
+    def _field(cls, block: str, label: str) -> str:
+        match = re.search(rf'<span class="label_pontilhada">{re.escape(label)}</span>.*?</tr>\s*<tr>\s*<td[^>]*>(.*?)</td>', block, re.I | re.S)
+        return cls._text(match.group(1)) if match else ""
+
+    @staticmethod
+    def _date(value: str) -> str | None:
+        match = re.search(r"\d{2}/\d{2}/\d{4}", value)
+        return datetime.strptime(match.group(), "%d/%m/%Y").date().isoformat() if match else None
+
+    @classmethod
+    def parse(cls, page: str, limit: int = 10) -> list[dict[str, Any]]:
+        starts = list(re.finditer(r'<div id="item_resultado-(\d+)">', page))
+        results = []
+        for index, start in enumerate(starts[:min(max(limit, 1), 10)]):
+            end = starts[index + 1].start() if index + 1 < len(starts) else len(page)
+            block, identifier = page[start.start():end], start.group(1)
+            number = cls._field(block, "Número").split(" ")[0]
+            excerpt = cls._field(block, "Ementa")
+            if not number or not excerpt:
+                continue
+            link = re.search(r'https://(?:arquivo|pje2g)\.trf1\.jus\.br/[^"&<]+', html.unescape(block))
+            results.append({
+                "id": f"trf1:{identifier}", "court": "TRF1", "type": cls._field(block, "Tipo") or "Acórdão",
+                "case_number": number, "rapporteur": cls._field(block, "Relator(a)") or None,
+                "chamber": cls._field(block, "Órgão julgador") or None,
+                "judgment_date": cls._date(cls._field(block, "Data")),
+                "publication_date": cls._date(cls._field(block, "Data da publicação")),
+                "excerpt": excerpt[:12000], "status": "NÃO VALIDADO", "source_url": cls.search_url,
+                "full_text_url": link.group(0) if link else None,
+            })
+        return results
+
+    def search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+        return self.parse(self._fetch(query), limit)

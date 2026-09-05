@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Adiciona pesquisa oficial de baixa frequência no formulário CJF/TRF1, com sessão JSF e `ViewState`.
+- Mantém todo resultado TRF1 como `NÃO VALIDADO` até a conferência do inteiro teor.
+- Classifica TJGO, STF e TRT18 como fontes assistidas e registra suas proteções observadas.
+- Impede a confusão entre recursos julgados no TST e acórdãos regionais do TRT18.
+- Adiciona ferramentas MCP para TRF1, status das fontes e preparação de pesquisa assistida.
+
 ## 0.2.4
 
 - Torna obrigatório o fallback pelo Chrome em portais oficiais dinâmicos ou bloqueados para fetch.

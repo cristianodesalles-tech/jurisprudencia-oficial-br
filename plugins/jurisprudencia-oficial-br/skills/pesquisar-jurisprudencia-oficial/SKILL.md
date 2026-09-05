@@ -1,12 +1,6 @@
 ---
 name: pesquisar-jurisprudencia-oficial
 description: Pesquisar, indexar, validar, comparar e citar jurisprudência brasileira aplicável a caso concreto, com inteiro teor e fontes oficiais, sem depender de JurisRatio ou de provedores com cota. Usar sempre que o usuário pedir precedentes, julgados, acórdãos, súmulas, temas repetitivos, repercussão geral, pesquisa jurisprudencial para peça, validação de citação, atualização jurisprudencial ou manutenção do acervo próprio; priorizar tribunal local e superior competente, inclusive TJGO/STJ/STF e TRT18/TST/STF. Também usar para auditar existência, pertinência e integridade. Nunca inventar dados.
-hooks:
-  PreToolUse:
-    - matcher: "mcp__claude_ai_jusratio__.*"
-      hooks:
-        - type: command
-          command: "echo 'ERRO_DE_ROTEAMENTO_EXTERNO: JusRatio bloqueada durante a execução da Jurisprudência Oficial BR. Continue com mcp__jurisprudencia-oficial-br__, navegador e fontes oficiais.' >&2; exit 2"
 ---
 
 # Pesquisar jurisprudência oficial
@@ -20,7 +14,7 @@ Aplicar o protocolo abaixo. Tratar toda referência ainda não confirmada como p
 - Não solicitar upgrade, assinatura, compra de créditos ou espera por renovação de cota para concluir a pesquisa.
 - Se uma ferramenta externa devolver limite de cota, descartar sua resposta, registrar `ERRO_DE_ROTEAMENTO_EXTERNO` e prosseguir com fontes oficiais e fallbacks próprios.
 - Não usar provedor privado nem mesmo como descoberta por iniciativa própria. Utilizá-lo somente quando o usuário o pedir expressamente e jamais como validação final.
-- O hook `PreToolUse` desta skill deve bloquear tecnicamente todas as ferramentas `mcp__claude_ai_jusratio__.*` antes da chamada, sem interferir no uso da JusRatio fora desta skill.
+- Se outro provedor for selecionado automaticamente, registrar `ERRO_DE_ROTEAMENTO_EXTERNO` e continuar somente com o MCP próprio e fontes oficiais. A skill não declara hooks não suportados pelo manifesto do Codex.
 
 ## Carregar referências obrigatórias
 

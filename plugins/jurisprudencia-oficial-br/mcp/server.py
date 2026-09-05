@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from engine.core import Candidate, CaseProfile, LegalReview, finalize_validation, plan_research, validate_candidate
 from engine.network import datajud_search, probe_sources, stj_open_data_search
+from engine.connectors import SourceRegistry, TRF1SearchConnector
 from engine.domain import SearchRequest
 from engine.runtime import build_runtime
 
@@ -20,7 +21,10 @@ TOOLS = [
     {"name":"search_datajud_metadata","description":"Pesquisa metadados no DataJud; não valida jurisprudência.","inputSchema":{"type":"object","properties":{"court":{"type":"string"},"query":{"type":"object"}},"required":["court","query"]}},
     {"name":"search_stj_open_data","description":"Descobre conjuntos oficiais no portal de dados abertos do STJ.","inputSchema":{"type":"object","properties":{"term":{"type":"string"},"rows":{"type":"integer"}},"required":["term"]}},
     {"name":"search_local_corpus","description":"Pesquisa o acervo próprio por busca lexical e vetorial com ranking jurídico.","inputSchema":{"type":"object","properties":{"query":{"type":"string"},"courts":{"type":"array","items":{"type":"string"}},"branch":{"type":"string"},"state":{"type":"string"},"limit":{"type":"integer"}},"required":["query"]}},
-    {"name":"corpus_health","description":"Retorna contagens e integridade da trilha de auditoria do acervo próprio.","inputSchema":{"type":"object","properties":{}}}
+    {"name":"corpus_health","description":"Retorna contagens e integridade da trilha de auditoria do acervo próprio.","inputSchema":{"type":"object","properties":{}}},
+    {"name":"search_trf1_official","description":"Pesquisa até 10 acórdãos no formulário oficial CJF/TRF1. Resultados permanecem NÃO VALIDADO até conferir o inteiro teor.","inputSchema":{"type":"object","properties":{"query":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":10}},"required":["query"]}},
+    {"name":"official_source_status","description":"Expõe cobertura, modo automático/assistido e proteções observadas nas fontes oficiais.","inputSchema":{"type":"object","properties":{}}},
+    {"name":"prepare_assisted_search","description":"Prepara conferência humana em TJGO, STF ou TRT18 sem contornar CAPTCHA/WAF.","inputSchema":{"type":"object","properties":{"court":{"type":"string","enum":["TJGO","STF","TRT18"]},"query":{"type":"string"}},"required":["court","query"]}}
 ]
 
 _runtime = None
@@ -54,6 +58,21 @@ def dispatch(name, args):
         verification = local_runtime().audit.verify()
         return {"counts":local_runtime().repository.counts(),"audit_chain_valid":verification.valid,
                 "audit_events":verification.events}
+    if name == "search_trf1_official":
+        return TRF1SearchConnector().search(args["query"], args.get("limit", 10))
+    if name == "official_source_status":
+        registry = SourceRegistry(ROOT / "config" / "sources.json")
+        return list(registry.sources.values())
+    if name == "prepare_assisted_search":
+        court, query = args["court"].upper(), args["query"].strip()
+        registry = SourceRegistry(ROOT / "config" / "sources.json")
+        source = next((item for item in registry.assisted_sources() if item["court"] == court), None)
+        if not source: raise ValueError("fonte assistida não configurada")
+        response = {"court":court,"query":query,"status":"VALIDAÇÃO HUMANA PENDENTE","source_url":source["base_url"],"protection":source.get("protection",[])}
+        if court == "STF" and any(char.isdigit() for char in query):
+            number = "".join(char for char in query if char.isdigit())
+            response["exact_number_url"] = "https://portal.stf.jus.br/jurisprudencia/pesquisarInteiroTeor.asp?numeroInteiroTeor=" + number
+        return response
     raise ValueError(f"ferramenta desconhecida: {name}")
 
 
@@ -63,7 +82,7 @@ def main():
             message = json.loads(line)
             method = message.get("method")
             if method == "initialize":
-                payload = {"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"jurisprudencia-oficial-br","version":"0.2.1"}}
+                payload = {"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"jurisprudencia-oficial-br","version":"0.3.0"}}
             elif method == "tools/list": payload = {"tools": TOOLS}
             elif method == "tools/call": payload = result(dispatch(message["params"]["name"], message["params"].get("arguments", {})))
             elif method == "notifications/initialized": continue

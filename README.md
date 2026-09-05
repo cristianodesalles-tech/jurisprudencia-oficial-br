@@ -20,7 +20,8 @@ O projeto decompõe o caso em teses, planeja buscas na hierarquia adequada, cons
 
 - Justiça estadual: TJ da unidade federativa + STJ + STF quando constitucional.
 - Justiça do Trabalho: TRT competente + TST + STF quando constitucional.
-- Roteamento de todos os TJs, TRTs e TRFs; conectores prioritários: TJGO, STJ, STF, TRT18 e TST.
+- Roteamento de todos os TJs, TRTs e TRFs; pesquisa oficial automática no TRF1, DataJud e dados abertos do STJ.
+- TJGO, STF e TRT18 operam em modo assistido enquanto seus portais não oferecerem um contrato público automatizável sem CAPTCHA/WAF.
 - Precedentes qualificados/vinculantes antes de julgados meramente persuasivos.
 
 ## Garantias de segurança
@@ -33,8 +34,9 @@ O projeto decompõe o caso em teses, planeja buscas na hierarquia adequada, cons
 - Autoajuste restrito à estratégia de busca e recuperação; nunca altera evidência ou inventa campos.
 - Isolamento de JurisRatio e de outros provedores privados com cota: o fluxo padrão usa somente acervo próprio, MCP, navegador e fontes oficiais.
 - Erro de cota de ferramenta externa é tratado como falha de roteamento e não interrompe a pesquisa oficial.
-- No Claude Code, um hook de pré-execução bloqueia tecnicamente as ferramentas JusRatio enquanto a skill oficial estiver ativa, sem desabilitar o conector para outros usos.
+- A skill instrui o agente a isolar provedores privados durante a pesquisa oficial e registra seleção indevida como erro de roteamento.
 - Portais oficiais dinâmicos exigem fallback pelo Chrome; robots.txt ou JavaScript não encerram a busca enquanto a interface oficial estiver acessível.
+- O backend do TST jamais é usado para rotular recursos do TST como se fossem acórdãos do TRT18.
 - O selo `VALIDADO` exige arquivo oficial preservado e SHA-256; sem isso, o resultado permanece no máximo `CONFIRMADO`.
 
 ## Instalação no Codex

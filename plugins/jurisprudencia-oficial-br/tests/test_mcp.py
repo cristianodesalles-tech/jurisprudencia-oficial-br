@@ -15,7 +15,10 @@ class McpTests(unittest.TestCase):
         process = subprocess.run(["python3", str(ROOT / "mcp" / "server.py")], input=messages, text=True, capture_output=True, check=True)
         lines = [json.loads(line) for line in process.stdout.splitlines()]
         self.assertEqual(lines[0]["result"]["serverInfo"]["name"], "jurisprudencia-oficial-br")
-        self.assertGreaterEqual(len(lines[1]["result"]["tools"]), 5)
+        names = {tool["name"] for tool in lines[1]["result"]["tools"]}
+        self.assertEqual(len(names), 11)
+        self.assertIn("search_trf1_official", names)
+        self.assertIn("prepare_assisted_search", names)
 
 
 if __name__ == "__main__": unittest.main()

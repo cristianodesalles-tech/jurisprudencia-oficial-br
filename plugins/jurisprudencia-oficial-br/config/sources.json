@@ -1,13 +1,14 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-08-16",
+  "updated_at": "2026-09-05",
   "sources": [
     {"id":"datajud","court":"CNJ","kind":"metadata_api","authority":"official","base_url":"https://api-publica.datajud.cnj.jus.br","validation_capability":false,"expected_probe_status":[401,403]},
-    {"id":"tjgo-juris","court":"TJGO","kind":"official_search","authority":"primary","base_url":"https://projudi.tjgo.jus.br/ConsultaJurisprudencia","validation_capability":true},
+    {"id":"tjgo-juris","court":"TJGO","kind":"official_search","authority":"primary","base_url":"https://projudi.tjgo.jus.br/ConsultaJurisprudencia","validation_capability":false,"access_mode":"assisted","protection":["turnstile","recaptcha"]},
     {"id":"stj-scon","court":"STJ","kind":"official_search","authority":"primary","base_url":"https://scon.stj.jus.br/SCON/","validation_capability":true},
     {"id":"stj-ckan","court":"STJ","kind":"open_data_api","authority":"official","base_url":"https://dadosabertos.web.stj.jus.br/api/3/action/package_search","validation_capability":false},
-    {"id":"stf-juris","court":"STF","kind":"official_search","authority":"primary","base_url":"https://jurisprudencia.stf.jus.br/pages/search","validation_capability":true},
-    {"id":"trt18-hub","court":"TRT18","kind":"official_hub","authority":"primary","base_url":"https://www.trt18.jus.br/portal/jurisprudencia/","validation_capability":true},
+    {"id":"stf-juris","court":"STF","kind":"official_search","authority":"primary","base_url":"https://jurisprudencia.stf.jus.br/pages/search","validation_capability":false,"access_mode":"assisted","protection":["aws_waf_challenge"]},
+    {"id":"trf1-cjf","court":"TRF1","kind":"official_search","authority":"primary","base_url":"https://jurisprudencia.cjf.jus.br/trf1","validation_capability":true,"access_mode":"automatic_limited"},
+    {"id":"trt18-hub","court":"TRT18","kind":"official_hub","authority":"primary","base_url":"https://www.trt18.jus.br/portal/jurisprudencia/","validation_capability":false,"access_mode":"assisted","protection":["regional_search_endpoint_unconfirmed"]},
     {"id":"tst-juris","court":"TST","kind":"official_search","authority":"primary","base_url":"https://jurisprudencia.tst.jus.br/","validation_capability":true}
   ]
 }
