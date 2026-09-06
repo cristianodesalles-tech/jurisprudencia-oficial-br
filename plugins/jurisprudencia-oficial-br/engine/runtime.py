@@ -22,8 +22,21 @@ class Runtime:
     audit: HashChainAudit
 
 
+def default_state_dir() -> Path:
+    """Diretório de estado estável, independente do diretório de trabalho do cliente.
+
+    A pasta do plugin é sincronizada e pode ser reescrita a cada atualização, por isso
+    o acervo mora no espaço de dados do usuário e não dentro do pacote.
+    """
+    override = os.getenv("STATE_DIR", "").strip()
+    if override and not override.startswith("${"):
+        return Path(override).expanduser()
+    base = os.getenv("XDG_DATA_HOME", "").strip() or str(Path.home() / ".local" / "share")
+    return Path(base).expanduser() / "jurisprudencia-oficial-br"
+
+
 def build_runtime() -> Runtime:
-    state_root = Path(os.getenv("STATE_DIR", ".state")).resolve()
+    state_root = default_state_dir().resolve()
     state_root.mkdir(parents=True, exist_ok=True)
     backend = os.getenv("STORAGE_BACKEND", "sqlite").lower()
     if backend == "postgres":

@@ -39,7 +39,11 @@ class CoreTests(unittest.TestCase):
 
     def test_legal_review_is_required_for_validated_status(self):
         structural = {"status": "CONFIRMADO", "errors": [], "candidate": {}, "document_sha256": "a" * 64}
-        review = LegalReview("Advogado revisor", True, True, True, True, True, True, "conferido")
+        review = LegalReview(
+            reviewer="Ana Paula Ferreira", reviewer_oab="GO 12345", document_sha256="a" * 64,
+            excerpt_verified=True, majority_reasoning_verified=True, factual_fit_verified=True,
+            current_law_verified=True, adverse_authority_searched=True, metadata_crosschecked=True,
+            notes="conferido")
         self.assertEqual(finalize_validation(structural, review)["status"], "VALIDADO")
         review.current_law_verified = False
         self.assertEqual(finalize_validation(structural, review)["status"], "NÃO VALIDADO")

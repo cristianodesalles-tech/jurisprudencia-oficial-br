@@ -11,6 +11,7 @@ from typing import Any, Iterable
 from .domain import JudicialDocument, Provenance, SourceRole, stable_hash, utcnow
 from .pipeline import IngestionPipeline, IngestionResult
 from .connectors import validate_official_url
+from .evidence import MIN_EMENTA_CHARS, MIN_FULL_TEXT_CHARS
 
 
 class UnsafeArchive(ValueError):
@@ -70,7 +71,8 @@ class RecordMapping:
     role: SourceRole = SourceRole.DISCOVERY
     aliases: dict[str, list[str]] = field(default_factory=lambda: {
         "case_number": ["case_number", "numeroProcesso", "numero_processo", "processo"],
-        "full_text": ["full_text", "inteiroTeor", "inteiro_teor", "texto", "ementa"],
+        "full_text": ["full_text", "inteiroTeor", "inteiro_teor", "texto", "textoIntegral"],
+        "ementa": ["ementa", "textoEmenta", "ementa_texto", "resumo"],
         "title": ["title", "titulo", "ementa"], "court": ["court", "tribunal"],
         "panel": ["panel", "orgaoJulgador", "orgao_julgador"],
         "rapporteur": ["rapporteur", "relator", "ministroRelator"],
@@ -81,6 +83,9 @@ class RecordMapping:
 
     def __post_init__(self) -> None:
         validate_official_url(self.source_url, resolve_dns=False)
+        # Lote e espelho são sempre descoberta. Inteiro teor só entra por busca
+        # individual na fonte oficial, com prova de resposta HTTP.
+        self.role = SourceRole.DISCOVERY
 
     def value(self, record: dict[str, Any], field_name: str, default: str = "") -> str:
         for alias in self.aliases.get(field_name, [field_name]):
@@ -93,8 +98,11 @@ class RecordMapping:
         raw = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
         case_number = self.value(record, "case_number")
         full_text = self.value(record, "full_text")
-        if not case_number or len(full_text) < 40:
+        ementa = self.value(record, "ementa")
+        body = full_text or ementa
+        if not case_number or len(body) < MIN_EMENTA_CHARS:
             raise ValueError("registro sem número ou texto suficiente")
+        ementa_only = len(full_text) < MIN_FULL_TEXT_CHARS
         provenance = Provenance(
             source_id=self.source_id, source_url=f"{self.source_url}#record={index}", retrieved_at=utcnow(),
             content_sha256=stable_hash(raw), role=self.role, content_type="application/json",
@@ -102,10 +110,11 @@ class RecordMapping:
         )
         known_aliases = {alias for aliases in self.aliases.values() for alias in aliases}
         metadata = {key: value for key, value in record.items() if key not in known_aliases}
+        metadata["ementa_only"] = ementa_only
         return JudicialDocument(
             court=self.value(record, "court", self.default_court), case_number=case_number,
             document_type=str(record.get("document_type", "acordao")),
-            title=self.value(record, "title", f"Documento {case_number}"), full_text=full_text,
+            title=self.value(record, "title", f"Documento {case_number}"), full_text=body, ementa=ementa,
             provenance=provenance, panel=self.value(record, "panel"), rapporteur=self.value(record, "rapporteur"),
             judgment_date=self.value(record, "judgment_date"), publication_date=self.value(record, "publication_date"),
             state=str(record.get("state", "")), branch=str(record.get("branch", "")),

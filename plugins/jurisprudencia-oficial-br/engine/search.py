@@ -2,73 +2,98 @@ from __future__ import annotations
 
 import math
 from datetime import date
-from typing import Iterable, Sequence
+from typing import Any, Sequence
 
+from .authority import (SUPERIOR_COURTS, classify, extract_case_references,
+                        normalize_case_number, ranking_config)
 from .domain import EvidenceStatus, SearchHit, SearchRequest
 from .embeddings import Embedder
 from .repository import Repository
-
-
-SUPERIOR_COURTS = {"STF", "STJ", "TST", "TSE", "STM"}
-QUALIFIED = {
-    "sumula_vinculante": 1.00, "controle_concentrado": 1.00,
-    "repercussao_geral": 0.95, "repetitivo": 0.95,
-    "irdr": 0.90, "iac": 0.90, "sumula": 0.82, "ordinary": 0.50,
-}
 
 
 def rrf_score(rank: int | None, constant: int = 60) -> float:
     return 0.0 if rank is None else 1.0 / (constant + rank)
 
 
-def authority_score(hit: SearchHit, target_state: str = "") -> tuple[float, list[str]]:
+def authority_score(hit: SearchHit, target_state: str = "", config: dict[str, Any] | None = None) -> tuple[float, list[str]]:
+    """Pontua autoridade a partir da classificação derivada, não de campo declarado."""
+    settings = (config or ranking_config())["autoridade"]
     document = hit.document
-    score = QUALIFIED.get(document.precedent_kind, 0.45)
-    reasons = [f"autoridade:{document.precedent_kind}"]
-    if document.binding:
-        score += 0.35
+    trusted = document.status in {EvidenceStatus.CONFIRMADO, EvidenceStatus.VALIDADO}
+    verdict = classify(document.court, document.document_type, document.panel, document.case_number,
+                       document.precedent_kind, trusted)
+    hit.authority_level = verdict.level
+    hit.abstract_reference = verdict.abstract_reference
+    reasons = [f"autoridade:{verdict.level}", *verdict.reasons]
+    score = settings["bonus_nivel"].get(verdict.level, 0.0)
+    if verdict.binding:
         reasons.append("vinculante")
+        if verdict.collegiate:
+            score += settings["bonus_colegiado_vinculante"]
+            reasons.append("colegiado-vinculante")
+    if not verdict.collegiate:
+        penalty = (settings["penalidade_monocratica_com_sumula"]
+                   if document.document_type == "monocratica_sv" else settings["penalidade_monocratica"])
+        score -= penalty
+        reasons.append("monocratica")
+    score += settings["ajuste_por_tipo"].get(document.document_type, 0.0)
     if document.court in SUPERIOR_COURTS:
-        score += 0.18
+        score += settings["bonus_tribunal_superior"]
         reasons.append("tribunal-superior")
-    if target_state and document.court == f"TJ{target_state}":
-        score += 0.16
+    if target_state and document.court in {f"TJ{target_state}", f"TRF{target_state}"}:
+        score += settings["bonus_tribunal_local"]
         reasons.append("tribunal-local")
-    if target_state == "GO" and document.court == "TRT18":
-        score += 0.16
-        reasons.append("tribunal-regional")
     if document.status == EvidenceStatus.VALIDADO:
         score += 0.20
         reasons.append("validado")
     elif document.status == EvidenceStatus.CONFIRMADO:
         score += 0.08
         reasons.append("confirmado")
+    return score * settings["peso"], reasons
+
+
+def recency_score(hit: SearchHit, config: dict[str, Any]) -> tuple[float, str]:
+    settings = config["recencia"]
+    if hit.semantic_score < settings["portao_semantico_minimo"]:
+        return 0.0, "recencia-nao-pontua-sem-aderencia"
+    document = hit.document
     try:
         year = int((document.judgment_date or document.publication_date)[:4])
-        age = max(date.today().year - year, 0)
-        score += 0.12 * math.exp(-age / 8)
-        reasons.append("atualidade")
     except (ValueError, TypeError):
-        reasons.append("data-ausente")
-    return score, reasons
+        return settings["score_data_desconhecida"], "data-ausente"
+    age = max(date.today().year - year, 0)
+    raw = settings["peso"] * math.exp(-age * math.log(2) / settings["meia_vida_anos"])
+    return min(raw, settings["contribuicao_maxima"]), "atualidade"
+
+
+def procedural_penalty(hit: SearchHit, config: dict[str, Any]) -> tuple[float, str | None]:
+    settings = config["processual"]
+    haystack = f"{hit.document.title} {hit.chunk.text}".lower()
+    if any(marker in haystack for marker in settings["marcadores"]):
+        return settings["peso_penalidade"], "discute-processo-nao-a-tese"
+    return 0.0, None
 
 
 class HybridSearchEngine:
-    def __init__(self, repository: Repository, embedder: Embedder, rrf_constant: int = 60):
+    def __init__(self, repository: Repository, embedder: Embedder, rrf_constant: int | None = None,
+                 config: dict[str, Any] | None = None):
         self.repository = repository
         self.embedder = embedder
-        self.rrf_constant = rrf_constant
+        self.config = config or ranking_config()
+        self.rrf_constant = rrf_constant or self.config["fusao"]["rrf_k"]
 
     def search(self, request: SearchRequest) -> list[SearchHit]:
         request.normalize()
+        cortes = self.config["cortes"]
         filters = {"branch": request.branch, "state": request.state,
                    "date_from": request.date_from, "date_to": request.date_to}
         if len(request.courts) == 1:
             filters["court"] = request.courts[0]
-        window = max(request.limit * 5, 30)
+        window = max(request.limit * 5, cortes["topk_hibrido"])
         lexical = self.repository.search_lexical(request.query, window, filters)
         query_embedding = self.embedder.embed([f"query: {request.query}"])[0]
         semantic = self.repository.search_semantic(query_embedding, window, filters)
+
         merged: dict[str, SearchHit] = {}
         for rank, (document, chunk, score) in enumerate(lexical, 1):
             hit = merged.setdefault(chunk.id, SearchHit(document=document, chunk=chunk))
@@ -76,21 +101,46 @@ class HybridSearchEngine:
         for rank, (document, chunk, score) in enumerate(semantic, 1):
             hit = merged.setdefault(chunk.id, SearchHit(document=document, chunk=chunk))
             hit.semantic_rank, hit.semantic_score = rank, score
-        results = []
+
+        citations = [normalize_case_number(item) for item in extract_case_references(request.query)]
+        results: list[SearchHit] = []
         for hit in merged.values():
-            hit.fusion_score = rrf_score(hit.lexical_rank, self.rrf_constant) + rrf_score(hit.semantic_rank, self.rrf_constant)
-            hit.authority_score, hit.reasons = authority_score(hit, request.state)
-            hit.final_score = hit.fusion_score * (1.0 + hit.authority_score)
-            if not request.include_unvalidated and hit.document.status not in {EvidenceStatus.CONFIRMADO, EvidenceStatus.VALIDADO}:
+            if not request.include_overruled and hit.document.metadata.get("overruling_status") == "superado":
+                continue
+            if not request.include_unvalidated and hit.document.status not in {
+                    EvidenceStatus.CONFIRMADO, EvidenceStatus.VALIDADO}:
                 continue
             if request.courts and hit.document.court not in request.courts:
                 continue
+            if request.tipos and hit.document.document_type not in request.tipos:
+                continue
+            hit.fusion_score = (rrf_score(hit.lexical_rank, self.rrf_constant)
+                                + rrf_score(hit.semantic_rank, self.rrf_constant))
+            hit.authority_score, hit.reasons = authority_score(hit, request.state, self.config)
+            hit.recency_score, recency_reason = recency_score(hit, self.config)
+            hit.reasons.append(recency_reason)
+            hit.procedural_penalty, procedural_reason = procedural_penalty(hit, self.config)
+            if procedural_reason:
+                hit.reasons.append(procedural_reason)
+            normalized = normalize_case_number(hit.document.case_number)
+            hit.pinned = bool(normalized and any(ref and (ref in normalized or normalized in ref) for ref in citations))
+            if hit.pinned:
+                hit.reasons.append("numero-citado-na-consulta")
+            hit.final_score = (hit.fusion_score * (1.0 + hit.authority_score - hit.procedural_penalty)
+                               + hit.recency_score * hit.fusion_score)
+            if hit.semantic_score and hit.semantic_score < cortes["piso_relevancia"] and not hit.pinned:
+                continue
             results.append(hit)
-        results.sort(key=lambda item: (-item.final_score, item.document.id, item.chunk.ordinal))
+
+        results.sort(key=lambda item: (not item.pinned, -item.final_score, item.document.id, item.chunk.ordinal))
         deduped = self._best_chunk_per_document(results)
+        pedido_explicito = bool(request.tipos)
+        principal = [hit for hit in deduped if pedido_explicito or not hit.abstract_reference]
+        referencias = [] if pedido_explicito else [hit for hit in deduped if hit.abstract_reference]
         if request.require_local_and_superior:
-            deduped = self._diversify(deduped, request.state)
-        return deduped[:request.limit]
+            principal = self._diversify(principal, request.state)
+        limite = min(request.limit, cortes["topk_final"]) if request.limit > cortes["topk_final"] else request.limit
+        return principal[:limite] + referencias[:cortes["maximo_referencias_abstratas"]]
 
     @staticmethod
     def _best_chunk_per_document(hits: Sequence[SearchHit]) -> list[SearchHit]:

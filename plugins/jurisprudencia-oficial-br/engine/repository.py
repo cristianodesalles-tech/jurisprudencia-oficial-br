@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 from dataclasses import replace
 from pathlib import Path
@@ -9,6 +10,9 @@ from typing import Iterable, Protocol, Sequence
 
 from .domain import DocumentChunk, EvidenceStatus, JudicialDocument, Provenance, SourceRole
 from .embeddings import cosine_similarity
+
+SUPERIOR_COURTS = ("STF", "STJ", "TST", "TSE", "STM")
+_SUPERIOR_SQL = ",".join(f"'{court}'" for court in SUPERIOR_COURTS)
 
 
 class Repository(Protocol):
@@ -18,6 +22,7 @@ class Repository(Protocol):
     def search_lexical(self, query: str, limit: int, filters: dict[str, str]) -> list[tuple[JudicialDocument, DocumentChunk, float]]: ...
     def search_semantic(self, embedding: Sequence[float], limit: int, filters: dict[str, str]) -> list[tuple[JudicialDocument, DocumentChunk, float]]: ...
     def counts(self) -> dict[str, int]: ...
+    def get_chunks(self, document_id: str) -> list[DocumentChunk]: ...
     def save_legal_review(self, document_id: str, review: dict, status: EvidenceStatus) -> None: ...
 
 
@@ -27,7 +32,7 @@ def _document_to_record(document: JudicialDocument) -> dict:
         "document_type": document.document_type, "title": document.title, "full_text": document.full_text,
         "panel": document.panel, "rapporteur": document.rapporteur, "judgment_date": document.judgment_date,
         "publication_date": document.publication_date, "state": document.state, "branch": document.branch,
-        "outcome": document.outcome, "precedent_kind": document.precedent_kind,
+        "outcome": document.outcome, "ementa": document.ementa, "precedent_kind": document.precedent_kind,
         "binding": int(document.binding), "themes": json.dumps(document.themes, ensure_ascii=False),
         "statutes": json.dumps(document.statutes, ensure_ascii=False),
         "metadata": json.dumps(document.metadata, ensure_ascii=False, sort_keys=True),
@@ -55,7 +60,7 @@ def _row_to_document(row: sqlite3.Row | dict) -> JudicialDocument:
         document_type=item["document_type"], title=item["title"], full_text=item["full_text"],
         panel=item["panel"], rapporteur=item["rapporteur"], judgment_date=item["judgment_date"],
         publication_date=item["publication_date"], state=item["state"], branch=item["branch"],
-        outcome=item["outcome"], precedent_kind=item["precedent_kind"], binding=bool(item["binding"]),
+        outcome=item["outcome"], ementa=item.get("ementa", "") or "", precedent_kind=item["precedent_kind"], binding=bool(item["binding"]),
         themes=decoded(item["themes"], []), statutes=decoded(item["statutes"], []),
         metadata=decoded(item["metadata"], {}), status=EvidenceStatus(item["status"]), provenance=provenance,
     )
@@ -77,7 +82,7 @@ class SQLiteRepository:
           document_type TEXT NOT NULL, title TEXT NOT NULL, full_text TEXT NOT NULL,
           panel TEXT NOT NULL, rapporteur TEXT NOT NULL, judgment_date TEXT NOT NULL,
           publication_date TEXT NOT NULL, state TEXT NOT NULL, branch TEXT NOT NULL,
-          outcome TEXT NOT NULL, precedent_kind TEXT NOT NULL, binding INTEGER NOT NULL,
+          outcome TEXT NOT NULL, ementa TEXT NOT NULL DEFAULT '', precedent_kind TEXT NOT NULL, binding INTEGER NOT NULL,
           themes TEXT NOT NULL, statutes TEXT NOT NULL, metadata TEXT NOT NULL, status TEXT NOT NULL,
           source_id TEXT NOT NULL, source_url TEXT NOT NULL, retrieved_at TEXT NOT NULL,
           content_sha256 TEXT NOT NULL, source_role TEXT NOT NULL, http_status INTEGER NOT NULL,
@@ -97,7 +102,35 @@ class SQLiteRepository:
           notes TEXT NOT NULL, resulting_status TEXT NOT NULL
         );
         """)
+        self._fts = self._ensure_fts()
+        columns = {row["name"] for row in self.connection.execute("PRAGMA table_info(documents)")}
+        if "ementa" not in columns:
+            self.connection.execute("ALTER TABLE documents ADD COLUMN ementa TEXT NOT NULL DEFAULT ''")
         self.connection.commit()
+
+    def _ensure_fts(self) -> bool:
+        """Índice de texto do próprio SQLite. Sem ele a busca lexical varre o acervo inteiro."""
+        try:
+            self.connection.executescript("""
+            CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(text, content='chunks', content_rowid='rowid');
+            CREATE TRIGGER IF NOT EXISTS chunks_fts_ins AFTER INSERT ON chunks BEGIN
+              INSERT INTO chunks_fts(rowid, text) VALUES (new.rowid, new.text);
+            END;
+            CREATE TRIGGER IF NOT EXISTS chunks_fts_del AFTER DELETE ON chunks BEGIN
+              INSERT INTO chunks_fts(chunks_fts, rowid, text) VALUES ('delete', old.rowid, old.text);
+            END;
+            """)
+            self.connection.commit()
+            return True
+        except sqlite3.OperationalError:
+            return False
+
+    def get_chunks(self, document_id: str) -> list[DocumentChunk]:
+        rows = self.connection.execute(
+            "SELECT id, document_id, ordinal, text, text_sha256 FROM chunks WHERE document_id=? ORDER BY ordinal",
+            (document_id,)).fetchall()
+        return [DocumentChunk(row["id"], row["document_id"], row["ordinal"], row["text"], row["text_sha256"])
+                for row in rows]
 
     def upsert_document(self, document: JudicialDocument, chunks: Sequence[DocumentChunk]) -> bool:
         record = _document_to_record(document)
@@ -122,18 +155,30 @@ class SQLiteRepository:
         row = self.connection.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
         return _row_to_document(row) if row else None
 
-    def _candidate_rows(self, filters: dict[str, str]) -> list[tuple[JudicialDocument, DocumentChunk]]:
+    def _sql_filters(self, filters: dict[str, str]) -> tuple[str, list[str]]:
+        clauses, values = self._filter_clauses(filters)
+        return ((" AND " + " AND ".join(clauses)) if clauses else ""), values
+
+    @staticmethod
+    def _filter_clauses(filters: dict[str, str]) -> tuple[list[str], list[str]]:
         clauses, values = [], []
-        for key in ("court", "branch", "state"):
+        for key in ("court", "branch"):
             if filters.get(key):
                 clauses.append(f"d.{key} = ?")
                 values.append(filters[key])
+        if filters.get("state"):
+            clauses.append(f"(d.state = ? OR d.court IN ({_SUPERIOR_SQL}))")
+            values.append(filters["state"])
         if filters.get("date_from"):
             clauses.append("COALESCE(NULLIF(d.judgment_date,''), d.publication_date) >= ?")
             values.append(filters["date_from"])
         if filters.get("date_to"):
             clauses.append("COALESCE(NULLIF(d.judgment_date,''), d.publication_date) <= ?")
             values.append(filters["date_to"])
+        return clauses, values
+
+    def _candidate_rows(self, filters: dict[str, str]) -> list[tuple[JudicialDocument, DocumentChunk]]:
+        clauses, values = self._filter_clauses(filters)
         where = "WHERE " + " AND ".join(clauses) if clauses else ""
         rows = self.connection.execute(
             f"SELECT d.*, c.id chunk_id, c.ordinal, c.text chunk_text, c.text_sha256, c.embedding FROM documents d JOIN chunks c ON c.document_id=d.id {where}",
@@ -145,7 +190,33 @@ class SQLiteRepository:
             for row in rows
         ]
 
+    @staticmethod
+    def _fts_query(query: str) -> str:
+        terms = [term for term in re.findall(r"[\wÀ-ÿ]{2,}", query or "")]
+        return " OR ".join(f'"{term}"' for term in terms)
+
     def search_lexical(self, query: str, limit: int, filters: dict[str, str]) -> list[tuple[JudicialDocument, DocumentChunk, float]]:
+        if self._fts:
+            expression = self._fts_query(query)
+            if not expression:
+                return []
+            where, values = self._sql_filters(filters)
+            sql = (f"SELECT d.*, c.id chunk_id, c.ordinal, c.text chunk_text, c.text_sha256, c.embedding, "
+                   f"-bm25(chunks_fts) score FROM chunks_fts "
+                   f"JOIN chunks c ON c.rowid = chunks_fts.rowid JOIN documents d ON d.id = c.document_id "
+                   f"WHERE chunks_fts MATCH ? {where} ORDER BY score DESC LIMIT ?")
+            try:
+                rows = self.connection.execute(sql, [expression, *values, limit]).fetchall()
+            except sqlite3.OperationalError:
+                self._fts = False
+            else:
+                return [(_row_to_document(row),
+                         DocumentChunk(row["chunk_id"], row["id"], row["ordinal"], row["chunk_text"],
+                                       row["text_sha256"], tuple(json.loads(row["embedding"]))),
+                         float(row["score"])) for row in rows]
+        return self._search_lexical_scan(query, limit, filters)
+
+    def _search_lexical_scan(self, query: str, limit: int, filters: dict[str, str]) -> list[tuple[JudicialDocument, DocumentChunk, float]]:
         terms = [term.lower() for term in query.split() if len(term) > 1]
         scored = []
         for document, chunk in self._candidate_rows(filters):
@@ -222,10 +293,13 @@ class PostgresRepository:
     @staticmethod
     def _filters(filters: dict[str, str]) -> tuple[str, list[str]]:
         clauses, values = [], []
-        for key in ("court", "branch", "state"):
+        for key in ("court", "branch"):
             if filters.get(key):
                 clauses.append(f"d.{key}=%s")
                 values.append(filters[key])
+        if filters.get("state"):
+            clauses.append(f"(d.state=%s OR d.court IN ({_SUPERIOR_SQL}))")
+            values.append(filters["state"])
         if filters.get("date_from"):
             clauses.append("COALESCE(NULLIF(d.judgment_date,''),d.publication_date)>=%s")
             values.append(filters["date_from"])
@@ -260,6 +334,14 @@ class PostgresRepository:
             cursor.execute(sql, [vector, *values, vector, limit])
             rows = cursor.fetchall()
         return [( _row_to_document(row), DocumentChunk(row["chunk_id"], row["id"], row["ordinal"], row["chunk_text"], row["text_sha256"]), float(row["score"]) ) for row in rows]
+
+    def get_chunks(self, document_id: str) -> list[DocumentChunk]:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT id,document_id,ordinal,text,text_sha256 FROM chunks WHERE document_id=%s ORDER BY ordinal",
+                           (document_id,))
+            rows = cursor.fetchall()
+        return [DocumentChunk(row["id"], row["document_id"], row["ordinal"], row["text"], row["text_sha256"])
+                for row in rows]
 
     def counts(self) -> dict[str, int]:
         with self._connect() as connection, connection.cursor() as cursor:

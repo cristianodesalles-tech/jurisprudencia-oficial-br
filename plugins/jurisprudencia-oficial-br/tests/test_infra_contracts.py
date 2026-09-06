@@ -39,7 +39,12 @@ class InfrastructureContracts(unittest.TestCase):
         self.assertTrue((ROOT / "skills" / "pesquisar-jurisprudencia-oficial" / "SKILL.md").is_file())
         mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["jurisprudencia-oficial-br"]
         self.assertIn("${CLAUDE_PLUGIN_ROOT}", " ".join(mcp["args"]))
-        self.assertIn("${CLAUDE_PLUGIN_DATA}", mcp["env"]["STATE_DIR"])
+        # O estado não pode depender de variável que o cliente não define: STATE_DIR
+        # sem valor resolvido criaria uma pasta com o nome literal da variável.
+        for value in mcp.get("env", {}).values():
+            self.assertNotIn("${CLAUDE_PLUGIN_DATA}", value)
+        from engine.runtime import default_state_dir
+        self.assertTrue(default_state_dir().is_absolute())
         codex_manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(codex_manifest["mcpServers"]["jurisprudencia-oficial-br"]["args"], ["mcp/server.py"])
 

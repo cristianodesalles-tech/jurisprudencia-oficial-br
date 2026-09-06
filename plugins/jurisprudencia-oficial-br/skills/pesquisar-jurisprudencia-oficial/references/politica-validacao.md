@@ -13,6 +13,10 @@ Um resultado só recebe o selo `VALIDADO` se sua existência, identidade, conte�
 - `REJEITADO`: identidade, conteúdo, vigência ou aderência falhou.
 - `NÃO VALIDADO`: verificação impedida; não citar na peça.
 
+## Quem decide o grau
+
+O grau é calculado pelo motor a partir de prova registrada, não da intenção de quem importa. Não existe parâmetro que promova documento. Ementa fica em campo próprio e nunca ocupa o lugar do inteiro teor. `VALIDADO` exige revisor humano com nome completo e OAB, e o SHA-256 conferido do documento que ele leu.
+
 ## Campos obrigatórios
 
 Tribunal, classe e número, órgão julgador, relator, data de julgamento, data de publicação quando disponível, resultado, ementa, URL oficial do registro, URL/arquivo do inteiro teor, trecho aplicável, localização do trecho, tese sustentada, fatos determinantes, distinções, status e data/hora da verificação.

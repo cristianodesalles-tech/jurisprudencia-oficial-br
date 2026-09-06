@@ -8,6 +8,14 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Any
+from urllib.parse import urlparse
+
+OFFICIAL_SUFFIXES = (".jus.br", ".cnj.jus.br")
+
+
+def is_official_url(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower().rstrip(".")
+    return host.endswith(OFFICIAL_SUFFIXES)
 
 
 class EvidenceStatus(str, Enum):
@@ -66,6 +74,7 @@ class JudicialDocument:
     state: str = ""
     branch: str = ""
     outcome: str = ""
+    ementa: str = ""
     precedent_kind: str = "ordinary"
     binding: bool = False
     themes: list[str] = field(default_factory=list)
@@ -85,6 +94,7 @@ class JudicialDocument:
         self.state = normalize_text(self.state).upper()
         self.branch = normalize_text(self.branch).lower()
         self.outcome = normalize_text(self.outcome)
+        self.ementa = normalize_text(self.ementa)
         self.precedent_kind = normalize_text(self.precedent_kind).lower() or "ordinary"
         self.themes = sorted(set(filter(None, map(normalize_text, self.themes))))
         self.statutes = sorted(set(filter(None, map(normalize_text, self.statutes))))
@@ -123,12 +133,15 @@ class SearchRequest:
     limit: int = 10
     include_unvalidated: bool = True
     require_local_and_superior: bool = True
+    tipos: list[str] = field(default_factory=list)
+    include_overruled: bool = False
 
     def normalize(self) -> "SearchRequest":
         self.query = normalize_text(self.query)
         self.courts = [normalize_text(court).upper() for court in self.courts]
         self.branch = normalize_text(self.branch).lower()
         self.state = normalize_text(self.state).upper()
+        self.tipos = [normalize_text(item).lower() for item in self.tipos]
         self.limit = min(max(int(self.limit), 1), 100)
         if not self.query:
             raise ValueError("query não pode ser vazia")
@@ -145,7 +158,12 @@ class SearchHit:
     semantic_score: float = 0.0
     fusion_score: float = 0.0
     authority_score: float = 0.0
+    recency_score: float = 0.0
+    procedural_penalty: float = 0.0
     final_score: float = 0.0
+    authority_level: str = "D"
+    abstract_reference: bool = False
+    pinned: bool = False
     reasons: list[str] = field(default_factory=list)
 
 

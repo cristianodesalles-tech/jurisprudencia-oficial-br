@@ -1,9 +1,12 @@
 [project]
 name = "jurisprudencia-oficial-br"
-version = "0.3.0"
+version = "0.5.0"
 description = "Pesquisa jurisprudencial brasileira auditável e orientada a fontes oficiais"
 requires-python = ">=3.11"
 license = {text = "MIT"}
+dependencies = [
+  "pypdf>=5,<7"
+]
 
 [project.optional-dependencies]
 production = [
@@ -13,7 +16,6 @@ production = [
   "boto3>=1.35,<2",
   "redis>=6,<9",
   "rq>=2,<3",
-  "pypdf>=5,<7",
   "sentence-transformers==5.6.1"
 ]
 

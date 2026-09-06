@@ -8,9 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+from .domain import OFFICIAL_SUFFIXES, is_official_url
 from .routing import CourtRouter
+from .validation import ReviewerNotIdentified, ValidationChecklist
 
-OFFICIAL_SUFFIXES = (".jus.br", ".cnj.jus.br")
 CNJ_PATTERN = re.compile(r"\b\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}\b")
 STATE_NAMES = {
     "ACRE": "AC", "ALAGOAS": "AL", "AMAPA": "AP", "AMAPÁ": "AP", "AMAZONAS": "AM",
@@ -27,11 +28,6 @@ STATE_NAMES = {
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def is_official_url(url: str) -> bool:
-    host = (urlparse(url).hostname or "").lower().rstrip(".")
-    return host.endswith(OFFICIAL_SUFFIXES)
 
 
 def sha256_file(path: str | Path) -> str:
@@ -76,12 +72,14 @@ class Candidate:
 @dataclass
 class LegalReview:
     reviewer: str
-    excerpt_verified: bool
-    majority_reasoning_verified: bool
-    factual_fit_verified: bool
-    current_law_verified: bool
-    adverse_authority_searched: bool
-    metadata_crosschecked: bool
+    reviewer_oab: str = ""
+    document_sha256: str = ""
+    excerpt_verified: bool = False
+    majority_reasoning_verified: bool = False
+    factual_fit_verified: bool = False
+    current_law_verified: bool = False
+    adverse_authority_searched: bool = False
+    metadata_crosschecked: bool = False
     notes: str = ""
 
 
@@ -177,8 +175,25 @@ def finalize_validation(structural: dict[str, Any], review: LegalReview) -> dict
     errors = list(structural.get("errors", []))
     if structural.get("status") != "CONFIRMADO":
         errors.append("validação estrutural não está CONFIRMADA")
-    if not review.reviewer.strip():
-        errors.append("revisor não identificado")
+    try:
+        ValidationChecklist(
+            reviewer=review.reviewer, reviewer_oab=review.reviewer_oab,
+            document_sha256=review.document_sha256 or str(structural.get("document_sha256") or ""),
+            excerpt_verified=review.excerpt_verified,
+            majority_reasoning_verified=review.majority_reasoning_verified,
+            factual_fit_verified=review.factual_fit_verified,
+            current_law_verified=review.current_law_verified,
+            adverse_authority_searched=review.adverse_authority_searched,
+            metadata_crosschecked=review.metadata_crosschecked,
+        ).assert_human_reviewer()
+    except ReviewerNotIdentified as exc:
+        errors.append(str(exc))
+    declared = (review.document_sha256 or "").strip().lower()
+    stored = str(structural.get("document_sha256") or "").strip().lower()
+    if not stored:
+        errors.append("validação estrutural não registrou hash do inteiro teor")
+    elif declared and declared != stored:
+        errors.append("hash conferido pelo revisor diverge do arquivo validado")
     if missing:
         errors.append("checagens jurídicas pendentes: " + ", ".join(missing))
     return {

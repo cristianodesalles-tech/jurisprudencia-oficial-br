@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "comentario": "Pesos do ranqueamento. Estruturais transferem entre acervos; os limiares marcados como calibravel dependem da densidade do acervo e devem ser medidos, nao copiados.",
+  "fusao": {
+    "rrf_k": 60,
+    "peso_semantico": 0.45,
+    "peso_lexical": 0.20,
+    "peso_rrf": 0.08
+  },
+  "autoridade": {
+    "peso": 0.22,
+    "bonus_nivel": {"A": 0.20, "B": 0.16, "C": 0.08, "D": -0.05, "E": -0.18},
+    "bonus_colegiado_vinculante": 0.06,
+    "penalidade_monocratica": 0.12,
+    "penalidade_monocratica_com_sumula": 0.05,
+    "ajuste_por_tipo": {"sumula_vinculante": 0.05, "tema_repetitivo_stj": 0.03},
+    "bonus_tribunal_local": 0.16,
+    "bonus_tribunal_superior": 0.18
+  },
+  "recencia": {
+    "peso": 0.35,
+    "meia_vida_anos": 7,
+    "contribuicao_maxima": 0.14,
+    "portao_semantico_minimo": 0.60,
+    "score_data_desconhecida": 0.05
+  },
+  "processual": {
+    "peso_penalidade": 0.22,
+    "marcadores": ["preliminar de", "juizo de admissibilidade", "prequestionamento",
+                   "sumula 7", "sumula 283", "sumula 284", "reexame de prova",
+                   "deserto", "intempestivo", "nao conhecido", "agravo interno desprovido"]
+  },
+  "cortes": {
+    "topk_hibrido": 80,
+    "topk_final": 11,
+    "piso_relevancia": 0.0,
+    "piso_relevancia_calibravel": "Limiar de pertinencia. Em acervo denso vale algo perto de 0.85; em acervo pequeno esvazia o resultado. Medir antes de subir.",
+    "maximo_referencias_abstratas": 5
+  }
+}

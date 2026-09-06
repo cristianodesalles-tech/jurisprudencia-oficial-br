@@ -55,8 +55,28 @@ Encerrar somente quando: (a) a matriz mínima validada estiver completa; (b) bus
 
 ## Usar o mecanismo determinístico
 
-Quando estiver disponível, executar `python3 scripts/jurisprudencia_cli.py plan --case caso.json` para gerar o plano e `python3 scripts/jurisprudencia_cli.py validate --candidate candidato.json --document acordao.pdf --audit auditoria.jsonl` para validar evidência. O servidor MCP expõe as mesmas operações.
+Quando estiver disponível, executar `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/jurisprudencia_cli.py plan --case caso.json` para gerar o plano e `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/jurisprudencia_cli.py validate --candidate candidato.json --document acordao.pdf --audit auditoria.jsonl` para validar evidência. O servidor MCP expõe as mesmas operações.
 
-Para o acervo próprio, usar `search`, `bulk-import`, `ingest-url`, `review` e `corpus-health`. Importações de espelhos e metadados permanecem `LOCALIZADO`; documento obtido de fonte oficial de validação pode chegar apenas a `CONFIRMADO`. Promover a `VALIDADO` exclusivamente com checklist jurídico completo e revisor identificado.
+Para o acervo próprio, usar `search`, `bulk-import`, `ingest-url`, `review` e `corpus-health`.
+
+O grau de evidência é decidido pelo motor, nunca declarado por quem chama. `CONFIRMADO` exige três provas simultâneas: fonte registrada com capacidade de validação, resposta HTTP 200 em domínio oficial com hash conferido e inteiro teor de verdade. Faltando qualquer uma, o documento para em `LOCALIZADO`. Lote, espelho, dados abertos e exportação entram sempre como descoberta, mesmo que a ordem diga o contrário. Ementa não é inteiro teor e é guardada em campo próprio.
+
+`VALIDADO` só existe com revisor humano identificado por nome completo e inscrição na OAB, mais o SHA-256 do documento conferido. O agente não assina a própria revisão, e tentar isso levanta erro em vez de gravar o selo.
 
 Não inserir credenciais, dados de segredo de justiça ou dados pessoais desnecessários nos artefatos de auditoria.
+
+## Operar portal protegido sem contornar proteção
+
+TJGO, TRT18 e STF estão registrados como fontes assistidas: têm CAPTCHA ou WAF e o plugin não os contorna. Nesses tribunais o inteiro teor entra por conferência humana. Abrir o portal, localizar o julgado, abrir o inteiro teor, copiar a URL exata da barra de endereços e registrar com `ingest_assisted_capture`, informando quem conferiu, com nome completo e OAB. A URL é gravada literal, incluindo caminho, parâmetros e âncora, porque o sufixo de roteamento não é decorativo e truncar gera 404 na conferência posterior.
+
+Busca automatizada nessas fontes continua parando em `LOCALIZADO`, e isso não é falha: é a diferença entre ter visto o documento e ter ouvido falar dele.
+
+## Ler o julgado inteiro
+
+Nunca resumir o que dá para paginar. `get_document` devolve o inteiro teor completo e `get_document_chunk` pagina por trecho repetindo os metadados do julgado em cada página. Ementa não é fundamento: quando o registro só tem ementa, ele vem marcado como tal e não sustenta afirmação sobre a ratio.
+
+## Autoridade e superação
+
+O nível de autoridade vai de A a E e é derivado do tribunal, do tipo documental e do órgão julgador, não do que o lote declarou. Súmulas, temas, OJ e enunciados vêm em faixa própria, separados dos acórdãos, e só disputam o resultado principal quando pedidos por tipo.
+
+Antes de fechar a matriz, consultar `overruling_lookup` pelo tema e pelo número. Precedente com superação registrada sai do resultado por padrão e, quando citado por identificador, vem marcado. Precedente canônico trazido do registro entra no texto marcado como `[INJETADO DO REGISTRY]`. O registro é curadoria: cada entrada exige fonte oficial e curador identificado, e jamais se preenche de memória.

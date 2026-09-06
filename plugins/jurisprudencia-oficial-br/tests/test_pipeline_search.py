@@ -12,7 +12,7 @@ from engine.pipeline import IngestionPipeline
 from engine.repository import SQLiteRepository
 from engine.search import HybridSearchEngine
 from engine.storage import FileObjectStore
-from helpers import make_document
+from helpers import make_confirmable_document as make_document, test_grader
 
 
 class PipelineSearchTests(unittest.TestCase):
@@ -22,7 +22,7 @@ class PipelineSearchTests(unittest.TestCase):
         self.repository = SQLiteRepository(root / "db.sqlite3")
         self.embedder = HashingEmbedder(768)
         self.pipeline = IngestionPipeline(self.repository, FileObjectStore(root / "objects"), self.embedder,
-                                          HashChainAudit(root / "audit.jsonl"))
+                                          HashChainAudit(root / "audit.jsonl"), grader=test_grader())
 
     def tearDown(self):
         self.temp.cleanup()

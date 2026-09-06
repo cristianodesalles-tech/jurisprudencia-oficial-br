@@ -32,6 +32,7 @@ class HashChainAudit:
     def __init__(self, path: str | Path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._cached_hash: str | None = None
 
     def append(self, event: str, payload: dict[str, Any]) -> dict[str, Any]:
         lock_path = self.path.with_suffix(self.path.suffix + ".lock")
@@ -45,6 +46,7 @@ class HashChainAudit:
                 stream.write(json.dumps(body, ensure_ascii=False, sort_keys=True) + "\n")
                 stream.flush()
                 os.fsync(stream.fileno())
+            self._cached_hash = body["event_hash"]
             if fcntl:
                 fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
             return body
@@ -59,12 +61,28 @@ class HashChainAudit:
         return parsed
 
     def last_hash(self) -> str:
-        events = list(self.events())
-        return events[-1]["event_hash"] if events else GENESIS_HASH
+        """Lê apenas a última linha. Reler o arquivo inteiro a cada gravação é quadrático."""
+        if self._cached_hash is not None:
+            return self._cached_hash
+        if not self.path.exists() or self.path.stat().st_size == 0:
+            return GENESIS_HASH
+        with self.path.open("rb") as stream:
+            stream.seek(0, os.SEEK_END)
+            size = stream.tell()
+            window = min(size, 65536)
+            stream.seek(size - window)
+            tail = stream.read(window).decode("utf-8", errors="replace").splitlines()
+        for line in reversed(tail):
+            if line.strip():
+                self._cached_hash = json.loads(line)["event_hash"]
+                return self._cached_hash
+        return GENESIS_HASH
 
     def verify(self) -> AuditVerification:
         previous = GENESIS_HASH
+        total = 0
         for index, item in enumerate(self.events()):
+            total = index + 1
             if item.get("previous_hash") != previous:
                 return AuditVerification(False, index, index, "encadeamento anterior divergente")
             claimed = item.get("event_hash", "")
@@ -73,4 +91,4 @@ class HashChainAudit:
             if claimed != actual:
                 return AuditVerification(False, index + 1, index, "hash do evento divergente")
             previous = claimed
-        return AuditVerification(True, len(list(self.events())))
+        return AuditVerification(True, total)
